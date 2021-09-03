@@ -3,7 +3,7 @@ BIN_DIR=/usr/local/bin/
 SYSTEMD_DIR=/etc/systemd/system/
 
 mkdir -p $CONFIG_DIR $CONFIG_DIR/secrets $BIN_DIR
-chmod 600 secrets
+chmod 600 $CONFIG_DIR/secrets
 
 cp -n  *.conf $CONFIG_DIR
 cp -nr scripts/ $CONFIG_DIR
