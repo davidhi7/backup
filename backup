@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+source /etc/backup/backup.conf
+
+NAME="$(date +%Y-%m-%dT%H:%M)"
+WORKING_DIR=$(pwd)
+BACKUP_TMP_DIR="$SOURCE/.backup_$NAME"
+
+try_mount() {
+    if [ $MOUNT_REPOSITORY -eq 1 ]; then
+        mountpoint -q $REPOSITORY
+        if [ $? -eq 0 ]; then
+            echo '=> Repository is already mounted'
+        else
+            echo '=> Mounting repository'
+            mount $REPOSITORY
+            if [ $? -ne 0 ]; then
+                echo "=> ERROR while mounting repository, exit value = $?" >&2
+                exit 1
+            fi
+        fi
+    fi
+}
+
+try_umount() {
+    if [ $MOUNT_REPOSITORY -eq 1 ]; then
+        echo '=> Unmounting repository'
+        umount $REPOSITORY
+        if [ $? -ne 0 ]; then
+            echo "=> ERROR while unmounting repository, exit value = $?" >&2
+        fi
+    fi
+}
+
+if [ -n $PRE_SCRIPT ]; then
+    if [ ! -d "$BACKUP_TMP_DIR" ]; then
+        mkdir "$BACKUP_TMP_DIR"
+    fi
+    cd "$BACKUP_TMP_DIR"
+    bash "$WORKING_DIR/$PRE_SCRIPT"
+    cd "$WORKING_DIR"
+fi
+
+try_mount
+
+echo "=> Creating backup $NAME"
+export BORG_REPO="$REPOSITORY"
+export BORG_PASSCOMMAND="cat $PASSPHRASE_FILE"
+borg create --stats                             \
+    --exclude-from "$EXCLUDE_FILE"              \
+    "::$NAME"                                   \
+    "$SOURCE"
+
+if [ -n $PRE_SCRIPT ]; then
+    rm -rf "$BACKUP_TMP_DIR"
+fi
+
+if [ $? -ne 0 ]; then
+    echo "=> ERROR while creating new archive $NAME, exit value = $?, exiting" >&2
+    try_umount
+    exit 1
+fi
+
+echo '=> Pruning old backups'
+borg prune --stats --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
+
+if [ $? -ne 0 ]; then
+    echo "=> ERROR while pruning old archives, exit value = $?" >&2
+fi
+
+try_umount
+echo '=> Finished Backup'

@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup
+OnFailure=discord-notification@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=backup
+
+[Install]
+WantedBy=timers.target

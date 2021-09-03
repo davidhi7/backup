@@ -1,0 +1,10 @@
+[Unit]
+Description=system backup
+Wants=network-online.target
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=12h
+
+[Install]
+WantedBy=timers.target
