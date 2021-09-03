@@ -3,11 +3,12 @@ BIN_DIR=/usr/local/bin/
 SYSTEMD_DIR=/etc/systemd/system/
 
 mkdir -p $CONFIG_DIR $CONFIG_DIR/secrets $BIN_DIR
+chmod 600 secrets
 
-cp -n *.conf $CONFIG_DIR
+cp -n  *.conf $CONFIG_DIR
 cp -nr scripts/ $CONFIG_DIR
+cp -n  systemd/* $SYSTEMD_DIR/
 cp {backup,notify-discord} $BIN_DIR
-cp systemd/* $SYSTEMD_DIR/
 
 systemctl enable --now backup.timer
 

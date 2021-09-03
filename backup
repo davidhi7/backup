@@ -36,7 +36,7 @@ if [ -n $PRE_SCRIPT ]; then
         mkdir "$BACKUP_TMP_DIR"
     fi
     cd "$BACKUP_TMP_DIR"
-    bash "$WORKING_DIR/$PRE_SCRIPT"
+    bash "$PRE_SCRIPT"
     cd "$WORKING_DIR"
 fi
 
