@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 source /etc/backup/discord.conf
 
-DATA="{\"username\": \"$USER\", \"content\":  \"**@everyone notification from <t:$( date +"%s" ):F>**\n\`\`\`$( systemctl status --full $1 | sed ':a;N;$!ba;s/\n/ /g' | sed 's/"/\\"/' )\`\`\`\"}"
+if [ $1 = 'meta:confirmation' ]; then
+	DATA="{\"username\": \"$USER\", \"content\":  \"backup script successfully initialized!\"}"
+else
+	DATA="{\"username\": \"$USER\", \"content\":  \"**@everyone notification from <t:$( date +"%s" ):F>**\n\`\`\`$( systemctl status --full $1 | sed ':a;N;$!ba;s/\n/ /g' | sed 's/"/\\"/' )\`\`\`\"}"
+fi
 
 echo "$DATA"
 curl -H 'Content-Type:application/json' \
