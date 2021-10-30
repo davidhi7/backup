@@ -2,6 +2,14 @@ CONFIG_DIR=/etc/backup/
 BIN_DIR=/usr/local/bin/
 SYSTEMD_DIR=/etc/systemd/system/
 
+if [[ -d $CONFIG_DIR && "$(ls -A $CONFIG_DIR)" ]]; then
+    echo "moving old contents of directory $CONFIG_DIR into $CONFIG/etc-backup/. Merge new and old configuration files manually if required."
+    cd $CONFIG_DIR
+    [[ -d etc-backup ]] || mkdir etc-backup/
+    find . -mindepth 1 -maxdepth 1 -not -name etc-backup -exec bash -c "rm -rf etc-backup/{} && mv -f -t etc-backup/ {}" \;
+    cd - > /dev/null
+fi
+
 mkdir -p $CONFIG_DIR $CONFIG_DIR/secrets $BIN_DIR
 chmod 600 $CONFIG_DIR/secrets
 
