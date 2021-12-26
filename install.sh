@@ -7,7 +7,7 @@ if [[ -d $CONFIG_DIR && "$(ls -A $CONFIG_DIR)" ]]; then
     echo 'Backup will be overriden during the next installation using this script.'
     cd $CONFIG_DIR
     [[ -d etc-backup ]] || mkdir etc-backup/
-    find . -mindepth 1 -maxdepth 1 -not -name etc-backup -exec bash -c "rm -rf etc-backup/{} && mv -f -t etc-backup/ {}" \;
+    find . -mindepth 1 -maxdepth 1 -not -name etc-backup -exec mv -f -t etc-backup/ {} \;
     cd - > /dev/null
 fi
 
