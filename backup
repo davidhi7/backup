@@ -6,6 +6,9 @@ WORKING_DIR=$(pwd)
 BACKUP_TMP_DIR="$SOURCE/.backup_$NAME"
 
 try_mount() {
+    if [ -n $PRE_HOOK ]; then
+        rm -rf "$BACKUP_TMP_DIR"
+    fi
     if [ $MOUNT_REPOSITORY -eq 1 ]; then
         mountpoint -q $REPOSITORY
         if [ $? -eq 0 ]; then
@@ -31,12 +34,11 @@ try_umount() {
     fi
 }
 
-if [ -n $PRE_SCRIPT ]; then
-    if [ ! -d "$BACKUP_TMP_DIR" ]; then
-        mkdir "$BACKUP_TMP_DIR"
-    fi
+if [ -n $PRE_HOOK ]; then
+    mkdir "$BACKUP_TMP_DIR"
     cd "$BACKUP_TMP_DIR"
-    bash "$PRE_SCRIPT"
+    echo '=> Running pre-hook'
+    bash "$PRE_HOOK"
     cd "$WORKING_DIR"
 fi
 
@@ -50,14 +52,8 @@ borg create --stats                             \
     "::$NAME"                                   \
     "$SOURCE"
 
-if [ -n $PRE_SCRIPT ]; then
-    rm -rf "$BACKUP_TMP_DIR"
-fi
-
 if [ $? -ne 0 ]; then
-    echo "=> ERROR while creating new archive $NAME, exit value = $?, exiting" >&2
-    try_umount
-    exit 1
+    echo "=> ERROR while creating new archive $NAME, exit value = $?" >&2
 fi
 
 echo '=> Pruning old backups'
@@ -65,6 +61,13 @@ borg prune --stats --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-mo
 
 if [ $? -ne 0 ]; then
     echo "=> ERROR while pruning old archives, exit value = $?" >&2
+fi
+
+if [ -n $HOOK ]; then
+    cd "$BACKUP_TMP_DIR"
+    echo '=> Running hook'
+    bash "$HOOK"
+    cd "$WORKING_DIR"
 fi
 
 try_umount
