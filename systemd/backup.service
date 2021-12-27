@@ -4,7 +4,7 @@ OnFailure=discord-notification@%n.service
 
 [Service]
 Type=oneshot
-ExecStart=backup
+ExecStart=backup /etc/backup/backup.conf
 
 [Install]
 WantedBy=timers.target
