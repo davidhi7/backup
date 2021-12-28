@@ -14,7 +14,7 @@ fi
 mkdir -p $CONFIG_DIR $CONFIG_DIR/secrets $BIN_DIR
 
 cp -n  *.conf $CONFIG_DIR
-cp -nr prehooks/ $CONFIG_DIR
+cp -nr hooks/ prehooks/ $CONFIG_DIR
 cp -n  systemd/* $SYSTEMD_DIR/
 
 cp {backup,notify-discord} $BIN_DIR
