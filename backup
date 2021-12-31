@@ -48,23 +48,34 @@ borg create --stats                             \
     --exclude-from "$EXCLUDE_FILE"              \
     "::$NAME"                                   \
     "$SOURCE"
+CREATE_STATUSCODE=$?
 
-if [ $? -ne 0 ]; then
-    echo "=> ERROR while creating new archive $NAME, exit value = $?" >&2
+if [ $CREATE_STATUSCODE -ne 0 ]; then
+    echo "=> ERROR or WARNING while creating new archive $NAME, exit code = $CREATE_STATUSCODE" >&2
 fi
 
 echo '=> Pruning old backups'
 borg prune --stats --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
+PRUNE_STATUSCODE=$?
 
-if [ $? -ne 0 ]; then
-    echo "=> ERROR while pruning old archives, exit value = $?" >&2
+if [ $PRUNE_STATUSCODE -ne 0 ]; then
+    echo "=> ERROR or WARNING while pruning old archives, exit code = $PRUNE_STATUSCODE" >&2
 fi
 
 if [[ -n $BACKUP_HOOK ]]; then
-    echo '=> Running hook'
-    bash "$BACKUP_HOOK" $1
+    if [[ $CREATE_STATUSCODE -le 1 && $PRUNE_STATUSCODE -le 1 ]]; then
+        echo '=> Running hook'
+        bash "$BACKUP_HOOK" $1
+    else
+        echo '=> Skipping hook because of errors during backup'
+    fi
 fi
 
 rm -rf "$BACKUP_TMP_DIR"
 try_umount
 echo '=> Finished Backup'
+
+if [[ $CREATE_STATUSCODE -ne 0 || $PRUNE_STATUSCODE -ne 0 ]]; then
+    exit 1
+fi
+exit 0
