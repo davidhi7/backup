@@ -8,40 +8,12 @@ WORKING_DIR=$(pwd)
 BACKUP_TMP_DIR="$SOURCE/.backup_$NAME"
 mkdir "$BACKUP_TMP_DIR"
 
-try_mount() {
-    if [ $MOUNT_REPOSITORY -eq 1 ]; then
-        mountpoint -q $REPOSITORY
-        if [ $? -eq 0 ]; then
-            echo '=> Repository is already mounted'
-        else
-            echo '=> Mounting repository'
-            mount $REPOSITORY
-            if [ $? -ne 0 ]; then
-                echo "=> ERROR while mounting repository, exit value = $?" >&2
-                exit 1
-            fi
-        fi
-    fi
-}
-
-try_umount() {
-    if [ $MOUNT_REPOSITORY -eq 1 ]; then
-        echo '=> Unmounting repository'
-        umount $REPOSITORY
-        if [ $? -ne 0 ]; then
-            echo "=> ERROR while unmounting repository, exit value = $?" >&2
-        fi
-    fi
-}
-
 if [[ -n $BACKUP_PRE_HOOK ]]; then
     cd "$BACKUP_TMP_DIR"
     echo '=> Running pre-hook'
     exec $BACKUP_PRE_HOOK
     cd "$WORKING_DIR"
 fi
-
-try_mount
 
 echo "=> Creating backup $NAME"
 export BORG_REPO="$REPOSITORY"
@@ -74,7 +46,6 @@ if [[ -n $BACKUP_HOOK ]]; then
 fi
 
 rm -rf "$BACKUP_TMP_DIR"
-try_umount
 echo '=> Finished Backup'
 
 if [[ $CREATE_STATUSCODE -ne 0 || $PRUNE_STATUSCODE -ne 0 ]]; then
