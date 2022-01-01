@@ -11,7 +11,7 @@ mkdir "$BACKUP_TMP_DIR"
 if [[ -n $BACKUP_PRE_HOOK ]]; then
     cd "$BACKUP_TMP_DIR"
     echo '=> Running pre-hook'
-    exec $BACKUP_PRE_HOOK
+    $BACKUP_PRE_HOOK
     cd "$WORKING_DIR"
 fi
 
@@ -39,7 +39,7 @@ fi
 if [[ -n $BACKUP_HOOK ]]; then
     if [[ $CREATE_STATUSCODE -le 1 && $PRUNE_STATUSCODE -le 1 ]]; then
         echo '=> Running hook'
-        exec $BACKUP_HOOK
+        $BACKUP_HOOK
     else
         echo '=> Skipping hook because of errors during backup'
     fi
