@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 echo '=> Clearing APT package cache'
 apt-get clean
 

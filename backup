@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+export CONFIG=$1
 source $1
 
 NAME="$(date +%Y-%m-%dT%H:%M)"
@@ -35,7 +37,7 @@ try_umount() {
 if [[ -n $BACKUP_PRE_HOOK ]]; then
     cd "$BACKUP_TMP_DIR"
     echo '=> Running pre-hook'
-    bash "$BACKUP_PRE_HOOK" $1
+    exec $BACKUP_PRE_HOOK
     cd "$WORKING_DIR"
 fi
 
@@ -65,7 +67,7 @@ fi
 if [[ -n $BACKUP_HOOK ]]; then
     if [[ $CREATE_STATUSCODE -le 1 && $PRUNE_STATUSCODE -le 1 ]]; then
         echo '=> Running hook'
-        bash "$BACKUP_HOOK" $1
+        exec $BACKUP_HOOK
     else
         echo '=> Skipping hook because of errors during backup'
     fi

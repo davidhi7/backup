@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 echo '=> Clearing pacman package cache'
 paccache -r
 
