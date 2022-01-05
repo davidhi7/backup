@@ -15,8 +15,11 @@ fi
 
 mkdir -p $CONFIG_DIR $CONFIG_DIR/secrets $BIN_DIR
 
+# TODO: ask before overwrite
 cp *.conf $CONFIG_DIR
 cp -r hooks/ prehooks/ $CONFIG_DIR
+chmod -R +x $CONFIG_DIR/{hooks,prehooks}/
+
 cp systemd/* $SYSTEMD_DIR/
 
 cp {backup,notify-discord} $BIN_DIR
