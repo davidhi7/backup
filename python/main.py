@@ -21,7 +21,7 @@ def backup(argv):
     backup_name = datetime.datetime.now().strftime(f'%Y-%m-%dT%H:%M')
     backup_tmp_dir = Path(config['General']['SOURCE']) / f'.backup_{backup_name}'
     backup_tmp_dir.mkdir()
-    
+
     borg_environment = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
 
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
@@ -30,7 +30,8 @@ def backup(argv):
     exitcodes['prune']  = borg_prune(borg_environment, config['Prune'])
     if config.has_option('General', 'BACKUP_HOOK'):
         exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], None)
-
+    if config.has_option('General', 'BACKUP_SUCCESS_HOOK') and exitcodes['create'] == 0 and exitcodes['prune'] == 0:
+        exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], None)
     shutil.rmtree(backup_tmp_dir)
 
 def run_pre_hook(cmd):
