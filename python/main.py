@@ -34,12 +34,6 @@ def backup(argv):
         exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], None)
     shutil.rmtree(backup_tmp_dir)
 
-def run_pre_hook(cmd):
-    return exec(cmd, None)
-
-def run_hook(cmd):
-    return exec(cmd, None)
-
 def borg_create(env, borg_exclude, borg_source, backup_name):
     #cmd = ['borg', 'create', '--stats', '--exclude-from', f'"{borg_exclude}"', f'"::{backup_name}"', f'"{borg_source}"']
     cmd = f'''
