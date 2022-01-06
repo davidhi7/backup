@@ -37,7 +37,7 @@ def backup(argv):
 
     # Temporary directory to store files created for example by pre-hooks. Going to be deleted after the backup finished.
     backup_tmp_dir = Path(config['General']['SOURCE']) / f'.backup_{backup_name}'
-    backup_tmp_dir.mkdir()
+    backup_tmp_dir.mkdir(exist_ok=True)
     
     # Environmental variables used by Borg
     borg_environment = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
@@ -45,28 +45,31 @@ def backup(argv):
     exitcodes = dict()
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
         exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], None)
-    exitcodes['create'] = borg_create(borg_environment, config['General']['EXCLUDE_FILE'], config['General']['SOURCE'], backup_name)
-    exitcodes['prune']  = borg_prune(borg_environment, config['Prune'])
+    exitcodes['create'] = borg_create(config, backup_name, borg_environment)
+    exitcodes['prune']  = borg_prune(config, borg_environment)
     if config.has_option('General', 'BACKUP_SUCCESS_HOOK') and exitcodes['create'] == 0 and exitcodes['prune'] == 0:
         exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], None)
     if config.has_option('General', 'BACKUP_HOOK'):
         exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], None)
     shutil.rmtree(backup_tmp_dir)
 
-def borg_create(env, borg_exclude, borg_source, backup_name):
+def borg_create(config, backup_name, env):
     #cmd = ['borg', 'create', '--stats', '--exclude-from', f'"{borg_exclude}"', f'"::{backup_name}"', f'"{borg_source}"']
+    borg_source = config['General']['SOURCE']
+    borg_exclude_parameter = str()
+    if config.has_option('General', 'EXCLUDE_FILE'):
+        borg_exclude_parameter = '--exclude-from ' + config.get('General', 'EXCLUDE_FILE')
     cmd = f'''
-    borg create --stats                 \
-        --exclude-from '{borg_exclude}' \
-        '::{backup_name}'               \
+    borg create --stats {borg_exclude_parameter}    \
+        '::{backup_name}'                           \
         '{borg_source}'   
     '''
     return exec(cmd, env)
 
-def borg_prune(env, borg_prune_options):
-    keep_daily   = borg_prune_options.getint('KEEP_DAILY', fallback=7)
-    keep_weekly  = borg_prune_options.getint('KEEP_WEEKLY', fallback=7)
-    keep_monthly = borg_prune_options.getint('KEEP_MONTHLY', fallback=12)
+def borg_prune(config, env):
+    keep_daily   = config.getint('Prune', 'KEEP_DAILY', fallback=7)
+    keep_weekly  = config.getint('Prune', 'KEEP_WEEKLY', fallback=4)
+    keep_monthly = config.getint('Prune', 'KEEP_MONTHLY', fallback=12)
     cmd = f'''
     borg prune --stats                      \
         --keep-daily={keep_daily}           \
