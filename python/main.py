@@ -33,7 +33,7 @@ def backup(argv):
     if config.has_option('General', 'LABEL'):
         backup_name += config.get('General', 'LABEL') + '_'
     backup_name += datetime.datetime.now().strftime( f'%Y-%m-%dT%H:%M')
-    print('Starting backup ' + backup_name)
+    print('=> Starting backup ' + backup_name)
 
     # Temporary directory to store files created for example by pre-hooks. Going to be deleted after the backup finished.
     backup_tmp_dir = Path(config['General']['SOURCE']) / f'.backup_{backup_name}'
@@ -44,14 +44,32 @@ def backup(argv):
 
     exitcodes = dict()
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
+        print('=> Running prehook')
         exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], None)
-    exitcodes['create'] = borg_create(config, backup_name, borg_environment)
-    exitcodes['prune']  = borg_prune(config, borg_environment)
-    if config.has_option('General', 'BACKUP_SUCCESS_HOOK') and exitcodes['create'] == 0 and exitcodes['prune'] == 0:
-        exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], None)
+    print('=> Creating new archive')
+    exitcodes['borg create'] = borg_create(config, backup_name, borg_environment)
+    print('=> Pruning repository')
+    exitcodes['borg prune']  = borg_prune(config, borg_environment)
+    if config.has_option('General', 'BACKUP_SUCCESS_HOOK'):
+        if exitcodes['borg create'] == 0 and exitcodes['borg prune'] == 0:
+            print('=> Running success hook')
+            exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], None)
+        else:
+            print('=> Skipping success hook, see status codes below')
     if config.has_option('General', 'BACKUP_HOOK'):
+        print('=> Running hook')
         exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], None)
+
     shutil.rmtree(backup_tmp_dir)
+
+    print('\nFinished backup')
+    print('List of exit codes:')
+    print_table(exitcodes)
+
+    if max(exitcodes.values()) > 1:
+        exit(1)
+    else:
+        exit(0)
 
 def borg_create(config, backup_name, env):
     #cmd = ['borg', 'create', '--stats', '--exclude-from', f'"{borg_exclude}"', f'"::{backup_name}"', f'"{borg_source}"']
@@ -80,8 +98,17 @@ def borg_prune(config, env):
 
 def exec(cmd, env):
     out = subprocess.run(cmd, env=env, shell=True)
-    return out.returncode 
+    return out.returncode
 
+# prints dict of data with string keys and integer values in a fancy table
+def print_table(data):
+    longest_key = len(max(data.keys(), key=len))
+    longest_val = len(str(max(data.values())))
+    separator = '  |  '
+    print('-' * (longest_key + longest_val + len(separator)))
+    for entry in data.items():
+        print(entry[0] + ((longest_key - len(entry[0])) * ' ') + separator + str(entry[1]))
+    print('-' * (longest_key + longest_val + len(separator)))
 
 if __name__ == '__main__':
     backup(sys.argv)
