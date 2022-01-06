@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 import subprocess
 import datetime
 import configparser
@@ -15,25 +16,28 @@ def load_config(filepath: Path):
 
 def backup(argv):
     config = load_config(Path(argv[1]))
+    exitcodes = dict()
 
     backup_name = datetime.datetime.now().strftime(f'%Y-%m-%dT%H:%M')
+    backup_tmp_dir = Path(config['General']['SOURCE']) / f'.backup_{backup_name}'
+    backup_tmp_dir.mkdir()
+    
     borg_environment = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
 
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
-        run_pre_hook(config['General']['BACKUP_PRE_HOOK'])
-    
-    borg_create(borg_environment, config['General']['EXCLUDE_FILE'], config['General']['SOURCE'], backup_name)
-    borg_prune(borg_environment, config['Prune'])
-
+        exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], None)
+    exitcodes['create'] = borg_create(borg_environment, config['General']['EXCLUDE_FILE'], config['General']['SOURCE'], backup_name)
+    exitcodes['prune']  = borg_prune(borg_environment, config['Prune'])
     if config.has_option('General', 'BACKUP_HOOK'):
-        run_hook(config['General']['BACKUP_HOOK'])
+        exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], None)
 
-def run_pre_hook(command):
-    # TODO impl
-    pass
+    shutil.rmtree(backup_tmp_dir)
 
-def run_hook(command):
-    pass
+def run_pre_hook(cmd):
+    return exec(cmd, None)
+
+def run_hook(cmd):
+    return exec(cmd, None)
 
 def borg_create(env, borg_exclude, borg_source, backup_name):
     #cmd = ['borg', 'create', '--stats', '--exclude-from', f'"{borg_exclude}"', f'"::{backup_name}"', f'"{borg_source}"']
