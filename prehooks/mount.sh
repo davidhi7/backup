@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-
-source $CONFIG
+printenv
 mountpoint -q $REPOSITORY
 if [ $? -eq 0 ]; then
     echo '=> Repository is already mounted'

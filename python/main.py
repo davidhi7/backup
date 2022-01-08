@@ -8,6 +8,8 @@ from pathlib import Path
 
 def load_config(filepath: Path):
     config = configparser.ConfigParser()
+    # stop converting key names to lower case, see https://stackoverflow.com/questions/19359556/configparser-reads-capital-keys-and-make-them-lower-case
+    config.optionxform = str
     config.read(filepath)
     # do some basic validation
     if not config.has_section('General'):
@@ -19,6 +21,13 @@ def load_config(filepath: Path):
             print('Missing required configuration file option ' + option)
             exit(1)
     return config
+
+def config_to_env(config):
+    env = dict()
+    for section in config.sections():
+        for key, value in config.items(section):
+            env[key] = value
+    return env
 
 def backup(argv):
     if len(argv) < 2:
@@ -40,25 +49,26 @@ def backup(argv):
     backup_tmp_dir.mkdir(exist_ok=True)
     
     # Environmental variables used by Borg
-    borg_environment = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
+    borg_env = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
+    hook_env = config_to_env(config)
 
     exitcodes = dict()
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
         print('=> Running prehook')
-        exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], None)
+        exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], hook_env)
     print('=> Creating new archive')
-    exitcodes['borg create'] = borg_create(config, backup_name, borg_environment)
+    exitcodes['borg create'] = borg_create(config, backup_name, borg_env)
     print('=> Pruning repository')
-    exitcodes['borg prune']  = borg_prune(config, borg_environment)
+    exitcodes['borg prune']  = borg_prune(config, borg_env)
     if config.has_option('General', 'BACKUP_SUCCESS_HOOK'):
         if exitcodes['borg create'] == 0 and exitcodes['borg prune'] == 0:
             print('=> Running success hook')
-            exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], None)
+            exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], hook_env)
         else:
             print('=> Skipping success hook, see status codes below')
     if config.has_option('General', 'BACKUP_HOOK'):
         print('=> Running hook')
-        exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], None)
+        exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], hook_env)
 
     shutil.rmtree(backup_tmp_dir)
 

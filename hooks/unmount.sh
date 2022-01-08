@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-source $CONFIG
 echo '=> Unmounting repository'
 umount $REPOSITORY
 if [ $? -ne 0 ]; then
