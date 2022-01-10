@@ -23,6 +23,7 @@ chmod -R +x $CONFIG_DIR/{hooks,prehooks}/
 cp systemd/* $SYSTEMD_DIR/
 
 cp {backup,notify-discord} $BIN_DIR
+cp -r backup.d/ $BIN_DIR/
 chmod +x $BIN_DIR/{backup,notify-discord}
 
 read -p 'repository passphrase: ' PASSPHRASE

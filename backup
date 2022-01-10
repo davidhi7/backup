@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+cd $(dirname "$0")
+
+COMMAND="backup.d/backup.py $1"
 if command -v python3 &> /dev/null; then
-    python3 python/main.py $1
+    python3 $COMMAND
 else
-    python python/main.py $1
+    python $COMMAND
 fi
 
