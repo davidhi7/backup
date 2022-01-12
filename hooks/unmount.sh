@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-echo '=> Unmounting repository'
+echo '> Executing unmount prehook'
 umount $REPOSITORY
 if [ $? -ne 0 ]; then
-    echo "=> ERROR while unmounting repository, exit value = $?" >&2
+    echo "> ERROR while unmounting repository, exit value = $?" >&2
 fi

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
 source /etc/backup/hooks/rclone.conf
-echo '=> starting to clone repository'
+echo '> Executing rclone sync prehook'
 borg with-lock $REPOSITORY rclone sync $REPOSITORY $REMOTE
-echo '=> finished cloning repository'
