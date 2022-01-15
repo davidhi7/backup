@@ -4,7 +4,7 @@ cd $(dirname "$0")
 
 COMMAND="backup.d/backup.py $1"
 if command -v python3 &> /dev/null; then
-    python3 $COMMAND
+    python3 -u $COMMAND
 else
-    python $COMMAND
+    python -u $COMMAND
 fi
