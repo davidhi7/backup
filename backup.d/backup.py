@@ -55,6 +55,8 @@ def backup(argv):
     exitcodes = dict()
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
         print('=> Running prehook command')
+        cmd = config['General']['BACKUP_PRE_HOOK']
+        print(f'Executing command "{cmd}"')
         exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], hook_env)
     print('=> Creating new archive')
     exitcodes['borg create'] = borg_create(config, backup_name, borg_env)
@@ -63,11 +65,15 @@ def backup(argv):
     if config.has_option('General', 'BACKUP_SUCCESS_HOOK'):
         if exitcodes['borg create'] == 0 and exitcodes['borg prune'] == 0:
             print('=> Running success hook command')
+            cmd = config['General']['BACKUP_SUCCESS_HOOK']
+            print(f'Executing command "{cmd}"')
             exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], hook_env)
         else:
             print('=> Skipping success hook, see status codes below')
     if config.has_option('General', 'BACKUP_HOOK'):
         print('=> Running hook command')
+        cmd = config['General']['BACKUP_HOOK']
+        print(f'Executing command "{cmd}"')
         exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], hook_env)
 
     shutil.rmtree(backup_tmp_dir)
