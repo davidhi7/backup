@@ -82,7 +82,7 @@ def backup(argv):
     print('List of exit codes:')
     print_table(exitcodes)
 
-    if max(exitcodes.values()) > 1:
+    if max(exitcodes.values()) >= 1:
         exit(1)
     else:
         exit(0)
