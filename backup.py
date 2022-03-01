@@ -28,6 +28,7 @@ def command_create(config, borg_env):
     # Temporary directory to store files created for example by pre-hooks. Going to be deleted after the backup finished.
     backup_tmp_dir = Path(config['General']['SOURCE']) / f'.backup_{backup_name}'
     backup_tmp_dir.mkdir(exist_ok=True)
+    os.chdir(backup_tmp_dir)
 
     # configuration provided as environmental variables for hooks
     hook_env = config_to_env(config)
@@ -53,6 +54,7 @@ def command_create(config, borg_env):
         cmd = config['General']['BACKUP_HOOK']
         exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], hook_env)
 
+    os.chdir(backup_tmp_dir / '..')
     shutil.rmtree(backup_tmp_dir)
 
     print('\nFinished backup')
