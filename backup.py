@@ -112,7 +112,7 @@ def borg_prune(config, env):
     return exec(cmd, env)
 
 def exec(cmd, env):
-    print(f'Executing command {cmd}')
+    print(f'Executing command "{cmd}"')
     out = subprocess.run(cmd, env=env, shell=True)
     return out.returncode
 
