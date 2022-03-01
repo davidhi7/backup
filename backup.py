@@ -129,8 +129,8 @@ def print_table(data):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Simple borgbackup wrapper')
     parser.add_argument('command', choices=['create', 'list', 'mount'], help='Action to perform on repository')
-    parser.add_argument('-c', '--config', nargs=1, default='/etc/backup/backup.conf', help='Path to configuration file. Default: /etc/backup/backup.conf')
-    parser.add_argument('-m', '--mount-point', nargs=1, default='/mnt', help='Mount point used when mounting the repository. Default: /mnt')
+    parser.add_argument('-c', '--config', default='/etc/backup/backup.conf', help='Path to configuration file. Default: /etc/backup/backup.conf')
+    parser.add_argument('-m', '--mount-point', default='/mnt', help='Mount point used when mounting the repository. Default: /mnt')
     args = vars(parser.parse_args())
 
     config_path = Path(args['config'])
