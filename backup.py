@@ -26,7 +26,7 @@ def command_create(config, borg_env):
     print('=> Starting backup ' + backup_name)
 
     # Temporary directory to store files created for example by pre-hooks. Going to be deleted after the backup finished.
-    backup_tmp_dir = Path(config['General']['SOURCE']) / f'.backup_{backup_name}'
+    backup_tmp_dir = Path(config['General']['SOURCE']) / f'backup_{backup_name}'
     backup_tmp_dir.mkdir(exist_ok=True)
     os.chdir(backup_tmp_dir)
 
