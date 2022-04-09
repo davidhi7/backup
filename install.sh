@@ -32,7 +32,6 @@ umask 177
 echo $PASSPHRASE > $CONFIG_DIR/secrets/passphrase.secret
 echo $WEBHOOK > $CONFIG_DIR/secrets/webhook.secret
 
-systemctl enable --now backup.timer
-
 echo 'You should soon receive a confirmation message in Discord!'
+echo 'Enable the backup using "systemctl enable --now backup.timer"'
 $BIN_DIR/notify-discord 'meta:confirmation'
