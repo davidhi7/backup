@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
 
-import sys
 import os
+import sys
 import shutil
+import logging
 import subprocess
 import datetime
 import argparse
 import configparser
 from pathlib import Path
 
-def borg_list(config, env):
-    return exec(f'borg list', borg_env)
-
-def borg_mount(config, env, mount_point):
-    if not Path(mount_point).is_dir():
-        print('Mount point is not a valid directory')
-        exit(1)
-    return exec(f'borg mount :: {mount_point}', borg_env)
+DEBUG=bool(os.environ.get('DEBUG', False))
+logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO, format='%(levelname)s %(module)s: %(message)s')
+logger = logging.getLogger(__name__)
 
 def command_create(config, borg_env):
     backup_name = str()
     if config.has_option('General', 'LABEL'):
         backup_name += config.get('General', 'LABEL') + '_'
     backup_name += datetime.datetime.now().strftime( f'%Y-%m-%dT%H:%M')
-    print('=> Starting backup ' + backup_name)
+    logger.info('=> Starting backup ' + backup_name)
 
     # Temporary directory to store files created for example by pre-hooks. Going to be deleted after the backup finished.
     backup_tmp_dir = Path(config['General']['SOURCE']) / f'backup_{backup_name}'
@@ -35,31 +31,34 @@ def command_create(config, borg_env):
 
     exitcodes = dict()
     if config.has_option('General', 'BACKUP_PRE_HOOK'):
-        print('=> Running prehook command')
+        logger.info('=> Running prehook command')
         cmd = config['General']['BACKUP_PRE_HOOK']
         exitcodes['prehook'] = exec(config['General']['BACKUP_PRE_HOOK'], hook_env)
-    print('=> Creating new archive')
+
+    logger.info('=> Creating new archive')
     exitcodes['borg create'] = borg_create(config, backup_name, borg_env)
-    print('=> Pruning repository')
+    logger.info('=> Pruning repository')
     exitcodes['borg prune']  = borg_prune(config, borg_env)
+
     if config.has_option('General', 'BACKUP_SUCCESS_HOOK'):
         if exitcodes['borg create'] == 0 and exitcodes['borg prune'] == 0:
-            print('=> Running success hook command')
+            logger.info('=> Running success hook command')
             cmd = config['General']['BACKUP_SUCCESS_HOOK']
             exitcodes['success_hook'] = exec(config['General']['BACKUP_SUCCESS_HOOK'], hook_env)
         else:
-            print('=> Skipping success hook, see status codes below')
+            logger.warning('=> Skipping success hook due to non-zero exit code')
+
     if config.has_option('General', 'BACKUP_HOOK'):
-        print('=> Running hook command')
+        logger.info('=> Running hook command')
         cmd = config['General']['BACKUP_HOOK']
         exitcodes['hook'] = exec(config['General']['BACKUP_HOOK'], hook_env)
 
     os.chdir(backup_tmp_dir / '..')
     shutil.rmtree(backup_tmp_dir)
 
-    print('\nFinished backup')
-    print('List of exit codes:')
-    print_table(exitcodes)
+    logger.info('\nFinished backup')
+    logger.info('List of exit codes:')
+    logger.info(print_table(exitcodes, logger.info))
 
     if max(exitcodes.values()) >= 1:
         exit(1)
@@ -73,12 +72,12 @@ def load_config(filepath: Path):
     config.read(filepath)
     # do some basic validation
     if not config.has_section('General'):
-        print('Configuration file is missing "General" section')
+        logger.critical('Configuration file is missing "General" section')
         exit(1)
     required_options = ('SOURCE', 'REPOSITORY', 'PASSPHRASE_FILE')
     for option in required_options:
         if not config.has_option('General', option):
-            print('Missing required configuration file option ' + option)
+            logger.critical('Missing required configuration file option ' + option)
             exit(1)
     return config
 
@@ -93,60 +92,59 @@ def borg_create(config, backup_name, env):
     borg_source = config['General']['SOURCE']
     borg_exclude_parameter = str()
     if config.has_option('General', 'EXCLUDE_FILE'):
-        borg_exclude_parameter = '--exclude-from ' + config.get('General', 'EXCLUDE_FILE')
-    cmd = f'''
-    borg create --stats {borg_exclude_parameter}    \
-        '::{backup_name}'                           \
-        '{borg_source}'   
-    '''
+        borg_exclude_parameter = f"--exclude-from '{config.get('General', 'EXCLUDE_FILE')}'"
+    cmd = f"borg create --stats {borg_exclude_parameter} '::{backup_name}' '{borg_source}'"
     return exec(cmd, env)
 
 def borg_prune(config, env):
-    keep_daily   = config.getint('Prune', 'KEEP_DAILY', fallback=7)
-    keep_weekly  = config.getint('Prune', 'KEEP_WEEKLY', fallback=4)
-    keep_monthly = config.getint('Prune', 'KEEP_MONTHLY', fallback=12)
-    cmd = f'''
-    borg prune --stats                      \
-        --keep-daily={keep_daily}           \
-        --keep-weekly={keep_weekly}         \
-        --keep-monthly={keep_monthly}       \
-    '''
+    for key in ('KEEP_DAILY', 'KEEP_WEEKLY', 'KEEP_MONTHLY'):
+        if key not in config['Prune']:
+            logger.warning(f'prune option {key} not specified, skipping prune.')
+    keep_daily   = config.getint('Prune', 'KEEP_DAILY')
+    keep_weekly  = config.getint('Prune', 'KEEP_WEEKLY')
+    keep_monthly = config.getint('Prune', 'KEEP_MONTHLY')
+    cmd = f"borg prune --stats --keep-daily={keep_daily} --keep-weekly={keep_weekly} --keep-monthly={keep_monthly}"
     return exec(cmd, env)
 
 def exec(cmd, env):
-    print(f'Executing command "{cmd}"')
+    cmd_fancy = ' '.join(cmd.split())
+    logger.info(f'Executing command "{cmd}"')
     out = subprocess.run(cmd, env=env, shell=True)
     return out.returncode
 
-def print_table(data):
-    ''' Print dict of data with string keys and integer values in a fancy table '''
+def print_table(data, output_function):
+    """Print dict of data with string keys and integer values in a fancy table to the given output function."""
     longest_key = len(max(data.keys(), key=len))
     longest_val = len(str(max(data.values())))
     separator = '  |  '
-    print('-' * (longest_key + longest_val + len(separator)))
+    output_function('-' * (longest_key + longest_val + len(separator)))
     for entry in data.items():
-        print(entry[0] + ((longest_key - len(entry[0])) * ' ') + separator + str(entry[1]))
-    print('-' * (longest_key + longest_val + len(separator)))
+        output_function(entry[0] + ((longest_key - len(entry[0])) * ' ') + separator + str(entry[1]))
+    output_function('-' * (longest_key + longest_val + len(separator)))
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Simple borgbackup wrapper')
-    parser.add_argument('command', choices=['create', 'list', 'mount'], help='Action to perform on repository')
+    parser = argparse.ArgumentParser(description='Simple borg wrapper')
     parser.add_argument('-c', '--config', default='/etc/backup/backup.conf', help='Path to configuration file. Default: /etc/backup/backup.conf')
-    parser.add_argument('-m', '--mount-point', default='/mnt', help='Mount point used when mounting the repository. Default: /mnt')
-    args = vars(parser.parse_args())
 
+    subparsers = parser.add_subparsers(title='command', dest='cmd', required=True)
+    subparsers.add_parser(name='create', help='Run backup routine')
+
+    exec_subparser = subparsers.add_parser(name='exec', help='Execute given command using borg-related environmental variables as defined in the configuration')
+    exec_subparser.add_argument('exec', nargs=argparse.REMAINDER, help='Command to execute')
+    
+    args = vars(parser.parse_args())
     config_path = Path(args['config'])
     if not config_path.is_file():
-        print('Given argument doesn\'t specifies a valid file')
+        logger.critical("Given argument doesn't specifies a valid file")
         exit(1)
     config = load_config(config_path)
 
     # Environmental variables used by Borg: repository and passphrase command
     borg_env = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
 
-    if args['command'] == 'create':
+    if args['cmd'] == 'create':
         command_create(config, borg_env)
-    elif args['command'] == 'list':
-        borg_list(config, borg_env)
-    elif args['command'] == 'mount':
-        borg_mount(config, borg_env, args['mount_point'])
+    elif args['cmd'] == 'exec':
+        # nargs=argparse.REMAINDER results in a list of all remaining tokens, these need to be joined to a single string for executing
+        command = ' '.join(args['exec'])
+        exec(command, borg_env)
