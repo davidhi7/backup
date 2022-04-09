@@ -1,5 +1,5 @@
 # Simple wrapper for Borg
-This minimal wrapper allows easy configuration and hook configuration as well as ismple Discord webhook integration in case of errors during the backup process.
+This minimal wrapper allows easy configuration and hook configuration as well as simple Discord webhook integration in case of errors during the backup process.
 
 Creating a new repository is outside the scope of this wrapper. It must be done manually using `borg init`.
 
