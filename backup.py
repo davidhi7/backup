@@ -11,7 +11,15 @@ import configparser
 from pathlib import Path
 
 DEBUG=bool(os.environ.get('DEBUG', False))
-logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO, format='%(levelname)s %(module)s: %(message)s')
+# file to temporarily store the log and send it in notifications
+LOG_FILE='/tmp/backup.log'
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG else logging.INFO,
+    format='%(levelname)s %(module)s: %(message)s',
+    handlers=[
+        logging.FileHandler(filename=LOG_FILE, mode='w'),
+        logging.StreamHandler(sys.stdout)
+    ])
 logger = logging.getLogger(__name__)
 
 def command_create(config, borg_env):
@@ -60,8 +68,16 @@ def command_create(config, borg_env):
     logger.info('List of exit codes:')
     logger.info(print_table(exitcodes, logger.info))
 
-    if max(exitcodes.values()) >= 1:
+    notify = config.has_option('Notifications', 'ENABLE_NTFY') and config['Notifications'].getbool('ENABLE_NTFY')
+
+    if max(exitcodes.values()) == 1:
+        if notify:    
+            send_notification(config=config, title='Warning occured', text='Warning occured during the backup. See the log for more information.', tags=['warning'])
         exit(1)
+    elif max(exitcodes.values()) >= 2:
+        if notify:
+            send_notification(config=config, title='Error occured', text='Error occurred during backup!', tags=['rotating_light'])
+        exit(2)
     else:
         exit(0)
 
@@ -122,6 +138,19 @@ def print_table(data, output_function):
         output_function(entry[0] + ((longest_key - len(entry[0])) * ' ') + separator + str(entry[1]))
     output_function('-' * (longest_key + longest_val + len(separator)))
 
+def send_notification(config, title, text, tags):
+    """Send a notification and the log file."""
+    url = '/'.join((config['Notifications'].get('NTFY_SERVER', 'https://ntfy.sh'), config['Notifications']['NTFY_TOPIC']))
+    tag_str = ','.join(tags)
+    exec(f'curl --upload-file "{LOG_FILE}" --Header "Filename: backup.log" "{url}"', {})
+    exec(f'curl --data "{text}" --Header "Tags: {tag_str}" --Header "Title: {title}" "{url}"', {})
+
+def excepthook(exception_type, exception_value, traceback):
+    """Overwrite excepthook to send notifications when unhandled exceptions happen."""
+    
+    sys.__excepthook__(exception_type, exception_value, traceback)
+    send_notification(config=config, title=f'Unhandled exception occurred: {exception_value}', text=traceback, tags=['rotating_light', 'rotating_light', 'rotating_light'])
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Simple borg wrapper')
     parser.add_argument('-c', '--config', default='/etc/backup/backup.conf', help='Path to configuration file. Default: /etc/backup/backup.conf')
@@ -138,6 +167,7 @@ if __name__ == '__main__':
         logger.critical("Given argument doesn't specifies a valid file")
         exit(1)
     config = load_config(config_path)
+    sys.excepthook = excepthook
 
     # Environmental variables used by Borg: repository and passphrase command
     borg_env = {'BORG_REPO': config['General']['REPOSITORY'], 'BORG_PASSCOMMAND': 'cat ' + config['General']['PASSPHRASE_FILE']}
