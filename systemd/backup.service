@@ -1,6 +1,7 @@
 [Unit]
 Description=Backup
 OnFailure=backup-notification@%n.service
+OnSuccess=backup-notification@%n.service
 
 [Service]
 Type=oneshot

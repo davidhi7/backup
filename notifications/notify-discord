@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 source /etc/backup/discord.conf
-echo $1
 
 if [[ $1 = ':confirm_installation:' ]]; then
-	DATA="{\"username\": \"$USER\", \"content\":  \"backup script successfully initialized!\"}"
-else
+	DATA="{\"username\": \"$USER\", \"content\":  \"Backup service initialized successfully.\"}"
+elif [[ "$( systemctl is-failed $1 )" = "failed" ]]; then
 	REPORT=$( systemctl status --full $1 | sed ':a;N;$!ba;s/\n/ /g' | sed 's/"/\\"/' )
 	TIME=$(date +"%s")
 	DATA="{\"username\": \"$USER\", \"content\":  \"**@everyone notification from <t:$TIME:F>**\n\`\`\`$REPORT\`\`\`\"}"
+else
+	DATA="{\"username\": \"$USER\", \"content\":  \"Backup completed without errrors or warnings.\"}"
 fi
 
 curl -H 'Content-Type:application/json' \
