@@ -15,23 +15,32 @@ fi
 
 mkdir -p $CONFIG_DIR $CONFIG_DIR/secrets $BIN_DIR
 
-# TODO: ask before overwrite
-cp *.conf $CONFIG_DIR
-cp -r hooks/ prehooks/ $CONFIG_DIR
+# TODO: ask before overwriting
+cp -r configuration/* $CONFIG_DIR
 chmod -R +x $CONFIG_DIR/{hooks,prehooks}/
 
 cp systemd/* $SYSTEMD_DIR/
 
-cp notify-discord $BIN_DIR/notify-discord
-cp backup.py $BIN_DIR/backup
-chmod +x $BIN_DIR/{backup,notify-discord}
+cp notifications/* $BIN_DIR/
+cp backup.py $BIN_DIR/
+chmod +x $BIN_DIR/{backup,notify-*}
 
-read -p 'repository passphrase: ' PASSPHRASE
-read -p 'webhook url: ' WEBHOOK
 umask 177
-echo $PASSPHRASE > $CONFIG_DIR/secrets/passphrase.secret
-echo $WEBHOOK > $CONFIG_DIR/secrets/webhook.secret
+read -p 'Do you want to use ntfy (Default) or Discord Webhooks for notifications? [N/d] ' NOTIFICATION_SERVICE
 
-echo 'You should soon receive a confirmation message in Discord!'
-echo 'Enable the backup using "systemctl enable --now backup.timer"'
-$BIN_DIR/notify-discord 'meta:confirmation'
+if [[ "$NOTIFICATION_SERVICE" = "d" || "$NOTIFICATION_SERVICE" = "D" ]]; then
+read -p 'Enter your Discord webhook url: ' WEBHOOK
+echo $WEBHOOK > $CONFIG_DIR/secrets/webhook.secret
+sed -i 's/ExecStart=notify-ntfy/ExecStart=notify-discord/' $SYSTEMD_DIR/backup-notification@.service
+else
+read -p 'Enter your ntfy topic url (e.g. https://ntfy.sh/my-backup): ' NTFY_TOPIC
+echo $NTFY_TOPIC > $CONFIG_DIR/secrets/ntfy-url.secret
+fi
+
+read -p 'Enter your repository passphrase: ' PASSPHRASE
+echo $PASSPHRASE > $CONFIG_DIR/secrets/passphrase.secret
+
+echo 'You should now receive a confirmation message via your selected notification service!'
+echo 'Enable the backup scheduling by executing the command "systemctl enable --now backup.timer"'
+systemctl daemon-reload
+systemctl start backup-notification@:confirm_installation:

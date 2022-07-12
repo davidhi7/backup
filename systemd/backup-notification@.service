@@ -1,0 +1,6 @@
+[Unit]
+Description=Send backup notifications
+
+[Service]
+Type=oneshot
+ExecStart=notify-ntfy %I

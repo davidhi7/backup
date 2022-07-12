@@ -1,6 +1,6 @@
 [Unit]
 Description=Backup
-OnFailure=discord-notification@%n.service
+OnFailure=backup-notification@%n.service
 
 [Service]
 Type=oneshot

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+source /etc/backup/ntfy.conf
+URL=$( cat $NTFY_URL_FILE )
+
+if [[ "$1" = ":confirm_installation:" ]]; then
+    curl \
+        --Header "Title: Initialization finished!" \
+        --Header "Tags: white_check_mark" \
+        --data "Backup script successfully initialized." \
+        $URL
+else
+    # send log files
+    LOG_FILE=/tmp/backup.log
+    journalctl --boot --unit $1 > $LOG_FILE
+    curl \
+        --Header "Title: Backup logs since $( uptime --since )" \
+        --Header "Tags: page_facing_up" \
+        --Header "Filename: backup.log" \
+        --upload-file $LOG_FILE \
+        $URL
+    # wait one second to ensure the following notification appears above the logs
+    sleep 1
+    curl \
+        --Header "Title: Warning or error during backup!" \
+        --Header "Tags: rotating_light" \
+        --data "A warning or error occurred during the backup. See the following log for more information on all backups since booting." \
+        $URL
+fi

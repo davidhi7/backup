@@ -1,6 +1,0 @@
-[Unit]
-Description=Send discord notification regarding service %I
-
-[Service]
-Type=oneshot
-ExecStart=notify-discord %I

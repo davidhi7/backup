@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 source /etc/backup/discord.conf
+echo $1
 
-if [[ $1 = 'meta:confirmation' ]]; then
+if [[ $1 = ':confirm_installation:' ]]; then
 	DATA="{\"username\": \"$USER\", \"content\":  \"backup script successfully initialized!\"}"
 else
 	REPORT=$( systemctl status --full $1 | sed ':a;N;$!ba;s/\n/ /g' | sed 's/"/\\"/' )
