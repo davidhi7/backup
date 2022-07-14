@@ -11,6 +11,6 @@ else
 	DATA="{\"username\": \"$USER\", \"content\":  \"Backup completed without errrors or warnings.\"}"
 fi
 
-curl -H 'Content-Type:application/json' \
-	-d "$DATA" 							\
+curl --Header 'Content-Type:application/json' \
+	--data "$DATA" \
     "$( cat $WEBHOOK_FILE )"
