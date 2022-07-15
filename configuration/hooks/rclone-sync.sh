@@ -2,4 +2,4 @@
 
 source /etc/backup/hooks/rclone.conf
 echo '> Executing rclone sync prehook'
-borg with-lock $REPOSITORY rclone sync $REPOSITORY $REMOTE
+borg with-lock $REPOSITORY rclone --config "/root/.config/rclone/rclone.conf" sync $REPOSITORY $REMOTE
