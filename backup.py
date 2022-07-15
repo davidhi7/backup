@@ -56,7 +56,7 @@ def command_create(config, borg_env):
     os.chdir(backup_tmp_dir / '..')
     shutil.rmtree(backup_tmp_dir)
 
-    logger.info('\nFinished backup')
+    logger.info('Finished backup')
     logger.info('List of exit codes:')
     logger.info(print_table(exitcodes, logger.info))
 
